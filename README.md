@@ -95,7 +95,7 @@ HLK-LD2402 - это радарный датчик миллиметрового �
    external_components:
      - source:
          type: git
-         url: https://github.com/mouldybread/hlk_ld2402_esphome
+         url: https://github.com/Biged2017/hlk_ld2402_esphome
        refresh: 0ms
    ```
 
