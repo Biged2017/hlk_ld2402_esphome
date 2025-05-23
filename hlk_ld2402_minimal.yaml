@@ -1,107 +1,162 @@
-# Minimal configuration for HLK-LD2402 radar sensor
-# This configuration includes only the essential sensors for everyday use
-
-# Basic ESPHome settings - customize these for your device
 esphome:
   name: radar-sensor
-  friendly_name: Radar Sensor
+  friendly_name: "Radar Sensor"
+  min_version: 2024.11.0 # Минимальная версия ESPHome
+  name_add_mac_suffix: false # Не добавляем суффикс MAC к имени
 
 esp32:
-  board: esp32dev
-
-# Enable Home Assistant API
-api:
-  encryption:
-    key: !secret api_encryption_key
-
-ota:
-  password: !secret ota_password
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-
-  # Enable fallback hotspot in case WiFi connection fails
-  ap:
-    ssid: "Radar-Sensor Fallback"
-    password: !secret fallback_password
-
+  board: esp32dev # Используем ESP32 Dev Board
+  framework: 
+    type: esp-idf # Используем ESP-IDF для лучшей совместимости с HLK-LD2402
+    version: recommended # Используем рекомендованную версию ESP-IDF
+  # Используем ESP-IDF для лучшей совместимости с HLK-LD2402
+  
 logger:
-  level: INFO
+  level: DEBUG # Уровень логов DEBUG для отладки
+  logs:
+    hlk_ld2402: DEBUG # Уровень логов HLK-LD2402
+    hlk_ld2402_uart: DEBUG # Уровень логов UART
+    hlk_ld2402_uart_buffer: DEBUG # Уровень логов буфера UART
+    uart: WARN  # Снижаем уровень логов UART
+  baud_rate: 0  # Отключаем Serial-лог для экономии памяти
+  tx_buffer_size: 512
 
-# UART configuration for HLK-LD2402
+safe_mode:
+  num_attempts: 5  # Оптимальный баланс
+
+# API configuration
+# Используем безопасный режим для API
+# и шифрование для защиты данных
+# Убедитесь, что у вас есть резервная копия ключа шифрования
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: "" # Ключ шифрования
+  services:
+    - service: restart # Сервис перезагрузки
+      then:
+        - delay: 5s
+        - lambda: App.safe_reboot();
+    - service: calibrate # Сервис калибровки
+      then:
+        - delay: 5s
+        - lambda: id(radar_sensor).calibrate();
+
+# OTA configuration
+# Используем безопасный режим для OTA
+# и шифрование для защиты данных
+# Убедитесь, что у вас есть резервная копия ключа шифрования
+# и пароля OTA
+ota:
+  - platform: esphome
+    password: ""
+
+# Wi-Fi configuration
+wifi:
+  ssid: "-"
+  password: "-"
+  power_save_mode: none
+  fast_connect: true
+  # Фиксируем IP для стабильности
+  manual_ip: # Если надо
+    static_ip: 192.168.1.100 
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+  ap:
+    ssid: "Raadar Hotspot" # SSID точки доступа
+    password: ""
+
+
 uart:
-  id: uart_bus
-  tx_pin: GPIO1  # TX0 hardware UART
-  rx_pin: GPIO3  # RX0 hardware UART
-  baud_rate: 115200
-  data_bits: 8
-  parity: NONE
-  stop_bits: 1
+  id: uart_bus # Идентификатор UART
+  tx_pin: GPIO1 # TX0 и RX0 аппаратный UART
+  rx_pin: GPIO3 # TX0 и RX0 аппаратный UART
+  baud_rate: 115200 # Скорость передачи данных
+  rx_buffer_size: 2048  # Увеличили буфер
+  parity: NONE # Используем без четности
+  stop_bits: 1 # Один стоп-бит
+# Используем аппаратный UART для лучшей производительности
+  # tx_buffer_size: 512  # Уменьшили размер буфера TX для экономии памяти
+  # rx_buffer_size: 2048  # Увеличили размер буфера RX для лучшей производительности
+  # flow_control: none  # Отключаем управление потоком для упрощения
+
+
+# captive_portal:
+#   # Используем встроенный портал для настройки Wi-Fi
+#   # и управления устройством
+#   # Можно отключить, если не нужен
+external_components:
+  - source: github://Mc-Joung/hlk_ld2402_esphome@main
+    refresh: 1d  # Автообновление
 
 # HLK-LD2402 radar component
-external_components:
-  - source:
-      type: git
-      url: https://github.com/mouldybread/hlk_ld2402_esphome
-    refresh: 0ms
 
 hlk_ld2402:
   uart_id: uart_bus
   id: radar_sensor
   max_distance: 5.0
-  timeout: 5
+  timeout: 30
 
-# Binary sensors - only essential ones
+# Статус HLK-LD2402
+# Используем текстовый сенсор для отображения состояния
+# и диагностики
+# Можно использовать для отладки и мониторинга
+text_sensor:
+  - platform: hlk_ld2402
+    id: radar_status
+    name: "Radar Status"
+    hlk_ld2402_id: radar_sensor
+    entity_category: diagnostic
+
+# Бинарные сенсоры
+# Используем фильтры для уменьшения дребезга
+# и повышения надежности срабатывания
+# Сенсор присутствия - показывает, есть ли кто-то в зоне обнаружения
+# Сенсор микродвижения - показывает, есть ли движение в зоне обнаружения
 binary_sensor:
-  # Presence detection - shows if someone is present in the detection area
   - platform: hlk_ld2402
     id: radar_presence
     name: "Presence"
     device_class: presence
     hlk_ld2402_id: radar_sensor
 
-  # Micromovement detection - shows if small movements are detected
   - platform: hlk_ld2402
     id: radar_micromovement
     name: "Micromovement"
     device_class: motion
     hlk_ld2402_id: radar_sensor
-  
-  # Power interference detection - shows if power supply is causing interference
-  - platform: hlk_ld2402
-    id: radar_power_interference
-    name: "Radar Power Interference"
-    device_class: problem
-    power_interference: true
-    hlk_ld2402_id: radar_sensor
 
-# Distance sensor - shows how far away the detected person is
+# Сенсор расстояния
+# Используем фильтр скользящего среднего для сглаживания данных
+# и уменьшения влияния помех
 sensor:
   - platform: hlk_ld2402
     id: radar_distance
     name: "Distance"
     hlk_ld2402_id: radar_sensor
-    device_class: distance
     unit_of_measurement: "cm"
-    accuracy_decimals: 1
-    throttle: 2000ms  # 2 second throttle for smoother readings
+    accuracy_decimals: 0
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 2
 
-# Only include essential calibration button
+# Кнопка калибровки
 button:
   - platform: template
-    name: "Calibrate"
+    name: "Calibrate Radar"
     icon: "mdi:radar"
+    entity_category: config
     on_press:
-      - lambda: id(radar_sensor).calibrate();
+      - lambda: |-
+          id(radar_sensor).calibrate();
+          id(radar_status).publish_state("Calibrating...");
+          delay(5000);
+          id(radar_status).publish_state("Calibration Complete");
 
-  # Save button for after calibration or threshold changes
-  - platform: template
-    name: "Save Config"
-    icon: "mdi:content-save"
-    on_press:
-      - lambda: id(radar_sensor).save_config();
-
-# Optional - Add status LED if available
 status_led:
-  pin: GPIO2
+  pin: 
+    number: GPIO13 # Используем GPIO13 для статуса LED 
+    inverted: true
+# Для подключения светодиода:
+# Подсоедините анод (+) через резистор 220 Ом к GPIO13, Катод (-) к GND
