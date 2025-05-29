@@ -267,6 +267,6 @@ HLK-LD2402 - это радарный датчик миллиметрового �
 
 ## Ссылки
 
-- Основан на технической документации Hi-Link HLK-LD2402
-- Разработан для интеграции с ESPHome и Home Assistant
-- Mc-Joung https://github.com/Mc-Joung/hlk_ld2402_esphome
+- [Основан на технической документации Hi-Link HLK-LD2402](https://hlktech.net/index.php?id=1292)
+- Разработан для интеграции с [ESPHome](https://esphome.io) и [Home Assistant](https://www.home-assistant.io/)
+- [Mc-Joung](https://github.com/Mc-Joung/hlk_ld2402_esphome)
