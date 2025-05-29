@@ -1,5 +1,5 @@
-***Форк Mc-Joung***
-https://github.com/Mc-Joung/hlk_ld2402_esphome
+***Форк Mc-Joung
+https://github.com/Mc-Joung/hlk_ld2402_esphome***
 
 # Компонент HLK-LD2402 ESPHome
 
