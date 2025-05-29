@@ -86,7 +86,7 @@ uart:
 #   # и управления устройством
 #   # Можно отключить, если не нужен
 external_components:
-  - source: github://Mc-Joung/hlk_ld2402_esphome@main
+  - source: https://github.com/Biged2017/hlk_ld2402_esphom
     refresh: 1d  # Автообновление
 
 # HLK-LD2402 radar component
